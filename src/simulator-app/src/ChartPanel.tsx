@@ -54,6 +54,11 @@ function revealedCountAt(candles: readonly Candle[], timeframeSeconds: number, n
  */
 export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // The canvas's sizing container - see the ResizeObserver effect below,
+  // which watches THIS element's width (not the canvas's own, which is
+  // what's actually being resized in response) to decide how big the
+  // chart should render at.
+  const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ChartCore | null>(null);
   const replayRef = useRef<ReplayController | null>(null);
   // The world-clock moment (a candle `time`, in seconds) the replay has
@@ -111,6 +116,70 @@ export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanel
     return () => {
       chart.destroy();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Keeps the canvas's actual rendered size matched to its container's
+   * real width, instead of the fixed 1000x500 the canvas's own HTML
+   * attributes specify (see the canvas element below - those attributes
+   * are now just a pre-JS fallback, sized via CSS's max-width/height:auto
+   * in index.css). Without this, the chart always rendered at exactly
+   * 1000 CSS px wide regardless of viewport - harmless on desktop, but
+   * on a phone that's wider than the whole screen, which forced the page
+   * itself to scroll horizontally and pushed the replay controls
+   * (Prev/Play/Next/Latest/Speed) off to the right, out of view -
+   * exactly the "can't see some buttons" symptom this effect exists to
+   * fix.
+   *
+   * `ResizeObserver`, not a `window` resize listener, because the
+   * container's own width can change for reasons that aren't a window
+   * resize at all (an orientation change, a browser UI chrome
+   * appearing/disappearing on mobile and changing the *usable* viewport)
+   * - observing the actual element whose width matters catches all of
+   * those the same way, with no separate cases to handle.
+   *
+   * Height tracks width at this chart's original 1000:500 (2:1) aspect
+   * ratio, clamped between MIN_HEIGHT and MAX_HEIGHT: MAX_HEIGHT keeps a
+   * wide desktop window from stretching the chart taller than its
+   * original design size once width is capped at .chart-panel's own
+   * max-width: 1000px (see index.css) - at exactly 1000px wide this
+   * clamp is a no-op, height is still exactly 500, matching this app's
+   * appearance before this effect existed. MIN_HEIGHT keeps a very
+   * narrow phone from rendering a chart so short it's unreadable - at
+   * that point this trades the original aspect ratio for a usable
+   * absolute height instead.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    const chart = chartRef.current;
+    if (!container || !chart) return;
+
+    const ASPECT_RATIO = 500 / 1000;
+    const MIN_HEIGHT = 260;
+    const MAX_HEIGHT = 500;
+
+    function applySize(width: number): void {
+      if (width <= 0) return; // container briefly unmeasured (e.g. display:none ancestor) - nothing to size to yet
+      const height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(width * ASPECT_RATIO)));
+      chart!.resize(Math.round(width), height);
+      // A resize can change how much width the price ruler leaves for
+      // the plot area, and therefore where the settings gear itself
+      // belongs - the same reasoning the chartOptions effect below
+      // already applies after a live settings change, just triggered by
+      // a size change instead of an option change.
+      setGearAnchor(chart!.getGearAnchor());
+    }
+
+    applySize(container.clientWidth);
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width !== undefined) applySize(width);
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -245,7 +314,12 @@ export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanel
 
   return (
     <div className="chart-panel">
-      <div className="chart-canvas-wrap">
+      <div className="chart-canvas-wrap" ref={containerRef}>
+        {/* width/height here are only the pre-JS fallback size (see
+            index.css's own canvas rule) - the ResizeObserver effect
+            above sets the real, container-matched size via
+            chart.resize() immediately after mount and on every
+            container resize after that. */}
         <canvas ref={canvasRef} width={1000} height={500} />
         <SettingsPanel anchor={gearAnchor} />
         {deleteAnchor && (

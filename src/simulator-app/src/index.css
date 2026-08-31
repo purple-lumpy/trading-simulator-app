@@ -13,6 +13,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Bounds the whole page to the same 1000px the chart/nav bar cap
+     themselves at, centered - without this the flex column's children
+     (each already width:100%/max-width:1000px) had nothing constraining
+     *this* element itself on very wide viewports, which was harmless,
+     but box-sizing: border-box here matters on narrow ones: it keeps
+     `padding` from adding to (rather than eating into) 100% width, which
+     is what the mobile media query below relies on to avoid overflow. */
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  box-sizing: border-box;
   padding: 24px;
   gap: 16px;
 }
@@ -188,9 +199,34 @@ header h1 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* Matches .chart-nav-bar's own width: 100% / max-width: 1000px so the
+     nav bar and the chart below it are always exactly as wide as each
+     other, at every viewport size - see .chart-canvas-wrap and its
+     canvas below for how that width actually reaches the canvas itself. */
+  width: 100%;
+  max-width: 1000px;
+  box-sizing: border-box;
 }
 
 .chart-panel canvas {
+  /* Fills .chart-canvas-wrap's own width (see its rule below) rather
+     than rendering at its fixed width/height HTML attributes (1000x500)
+     regardless of viewport - THAT was what made this canvas wider than
+     any phone screen, forcing the whole page to scroll horizontally and
+     pushing the replay controls (Prev/Play/Next/Speed) off to the right,
+     out of view, on mobile. ChartPanel's own ResizeObserver effect calls
+     chart.resize() with the container's real pixel width/height and
+     ChartCore sets an exact inline style.width/height in response (see
+     ChartCore.applyPixelRatio) - that inline style is what actually
+     governs the canvas's rendered size day to day and simply overrides
+     these; `height: auto` here is only the fallback appearance for the
+     brief moment before that effect runs (or if it somehow doesn't),
+     scaling by the same 2:1 width:height ratio the 1000x500 attributes
+     already imply, so there's no visible jump once the real size lands. */
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
   border: 1px solid #22252b;
   border-radius: 4px;
 }
@@ -198,6 +234,14 @@ header h1 {
 .controls {
   display: flex;
   align-items: center;
+  /* Wraps onto additional lines rather than overflowing horizontally
+     when Prev/Play/Next/Latest/Speed/the bar-count readout don't all
+     fit one row - the other half of the mobile-overflow fix alongside
+     the canvas/wrap rules above (that fix stopped the *canvas* from
+     forcing a wide page; this stops the *controls row itself* from
+     doing the same on a narrow one, independent of the canvas). */
+  flex-wrap: wrap;
+  row-gap: 8px;
   gap: 12px;
   font-size: 13px;
 }
@@ -236,8 +280,17 @@ header h1 {
 /* ---- settings gear + panel ------------------------------------------ */
 
 .chart-canvas-wrap {
+  /* display: block + width: 100% (not the old inline-block) so this
+     div's own width comes from its parent (.chart-panel, capped at
+     1000px) rather than shrinking to fit its child canvas's fixed HTML
+     attributes - inline-block sized to content is what let a
+     1000px-wide canvas force this wrapper, and everything around it,
+     to be 1000px wide even in a 375px-wide phone viewport. This is also
+     the element ChartPanel's ResizeObserver watches (via containerRef)
+     to learn the real width to pass to chart.resize(). */
   position: relative;
-  display: inline-block;
+  display: block;
+  width: 100%;
 }
 
 /**
@@ -322,7 +375,13 @@ header h1 {
   position: absolute;
   top: 36px;
   right: 0;
-  width: 260px;
+  /* min(260px, ...) rather than a bare 260px - on a narrow phone the
+     chart itself (this panel's own positioning parent, .chart-canvas-wrap)
+     can be well under 260px wide, which would run the panel off the left
+     edge of the screen; this keeps it inside the viewport (with 16px of
+     breathing room on each side) instead of only ever inside a
+     comfortably-wide desktop chart. */
+  width: min(260px, calc(100vw - 32px));
   max-height: 420px;
   overflow-y: auto;
   background: #16181c;
@@ -513,4 +572,76 @@ header h1 {
   padding: 4px 6px;
   font-size: 12px;
   font-family: monospace;
+}
+
+/* ---- mobile / narrow-viewport adjustments --------------------------- */
+
+/**
+ * Everything above this point already scales down correctly at any
+ * width (the canvas/wrap/controls rules earlier in this file are what
+ * actually stop things overflowing) - this block is purely about
+ * comfort at phone widths: tighter spacing where 24px of padding is a
+ * meaningful chunk of a ~375px screen, and larger touch targets where
+ * this app's normal button sizing (tuned for a mouse pointer) reads as
+ * genuinely small under a fingertip. 600px matches a common
+ * portrait-phone/small-tablet breakpoint, not tied to any specific
+ * device.
+ */
+@media (max-width: 600px) {
+  .app {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-size: 17px;
+  }
+
+  .chart-nav-bar {
+    gap: 10px;
+    padding: 6px 2px;
+  }
+
+  .controls {
+    /* Centers the wrapped rows instead of leaving the last, partial row
+       flush left while the full rows above it span edge to edge - reads
+       as tidier once wrapping (see the base .controls rule) is actually
+       happening, which on a phone it usually is. */
+    justify-content: center;
+  }
+
+  .controls button,
+  .controls select {
+    /* ~44px touch target (Apple/Google's own baseline) instead of this
+       app's normal mouse-tuned sizing - padding alone gets most of the
+       way there given the existing font-size. */
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .controls .progress {
+    /* Its own full-width row, centered, rather than flush right on
+       whatever wrapped line it lands on (margin-left: auto's effect in
+       the base rule) - reads more clearly as a status line once it's
+       not sharing a row with buttons. */
+    margin-left: 0;
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  .drawing-tools button {
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 16px;
+  }
+
+  .settings-gear-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .start-date-clear {
+    width: 26px;
+    height: 26px;
+  }
 }
