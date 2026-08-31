@@ -31,11 +31,15 @@ const DRAWING_TOOLS: ReadonlyArray<{ name: DrawingToolName; label: string; ariaL
   { name: "horizontal-line", label: "\u2015", ariaLabel: "Horizontal line", title: "Horizontal line \u2014 click once on the chart to mark a price level" },
   { name: "vertical-line", label: "\uFF5C", ariaLabel: "Vertical line", title: "Vertical line \u2014 click once on the chart to mark a moment in time" },
   { name: "trendline", label: "\u2197", ariaLabel: "Trend line", title: "Trend line \u2014 click once to start it, click again to set its end point" },
+  // A squiggle ending in an arrowhead, not a plain "W" - matches what
+  // the tool actually draws on the chart (a zigzag whose last leg
+  // carries an arrow showing which way the trend is heading, see
+  // TraceLine's own doc comment), so the button previews its own effect.
   {
     name: "trace",
-    label: "W",
-    ariaLabel: "Trace (multi-point line)",
-    title: "Trace \u2014 click to place each point, keep clicking to add more connected segments (zigzag through as many as you like), then double-click, right-click, or a two-finger click to finish it",
+    label: "\u21DD",
+    ariaLabel: "Trace (multi-point line with a trend arrow)",
+    title: "Trace \u2014 click to place each point, keep clicking to add more connected segments (zigzag through as many as you like); the last leg gets an arrow showing the trend's direction. Double-click, right-click, or a two-finger click to finish it",
   },
   // A plain "+" rather than an "X"/multiplication glyph - this is the
   // crosshair tool, matching the actual crosshair cursor it puts the

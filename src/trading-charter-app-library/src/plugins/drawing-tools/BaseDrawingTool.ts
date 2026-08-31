@@ -27,6 +27,42 @@ export const ANCHOR_DOT_RADIUS = 3;
 /** Stroke color a selected placed drawing renders with instead of its own `color`, so a click-to-select (see `ChartCore`'s "cross"-tool handling) is visually obvious before Delete/Backspace removes it. */
 export const SELECTED_STROKE_COLOR = "#ff9800";
 
+/** Length (CSS px) of each of an arrowhead's two back-swept wings, drawn by `drawArrowhead()` below - `TraceLine`'s own doc comment covers why it needs one at all. */
+const ARROWHEAD_WING_LENGTH = 9;
+
+/** Half-angle (radians) between an arrowhead's two wings and the line they point back along - about 26 degrees, a narrow-ish, clearly-directional triangle rather than a wide, blunt one. */
+const ARROWHEAD_SPREAD_RADIANS = Math.PI / 7;
+
+/**
+ * Draws a small filled triangular arrowhead with its tip AT `(tipX,
+ * tipY)`, pointing along the direction from `(fromX, fromY)` to that tip
+ * - i.e. the same direction the line segment feeding it already runs,
+ * so the arrow reads as "this is where that segment is headed," not a
+ * separately-aimed decoration. Shared here (rather than inlined in
+ * `TraceLine.draw()`, its only caller today) as plain geometry with
+ * nothing tool-specific about it, the same reasoning
+ * `pointToSegmentDistance()` above already follows - a future tool that
+ * wants a directional arrow of its own (a single-segment Trendline, say)
+ * can reuse this unchanged.
+ */
+export function drawArrowhead(ctx: CanvasRenderingContext2D, fromX: number, fromY: number, tipX: number, tipY: number, color: string): void {
+  const angle = Math.atan2(tipY - fromY, tipX - fromX);
+  const leftX = tipX - ARROWHEAD_WING_LENGTH * Math.cos(angle - ARROWHEAD_SPREAD_RADIANS);
+  const leftY = tipY - ARROWHEAD_WING_LENGTH * Math.sin(angle - ARROWHEAD_SPREAD_RADIANS);
+  const rightX = tipX - ARROWHEAD_WING_LENGTH * Math.cos(angle + ARROWHEAD_SPREAD_RADIANS);
+  const rightY = tipY - ARROWHEAD_WING_LENGTH * Math.sin(angle + ARROWHEAD_SPREAD_RADIANS);
+
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(leftX, leftY);
+  ctx.lineTo(rightX, rightY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 let nextDrawingId = 1;
 
 /**

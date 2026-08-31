@@ -1,11 +1,14 @@
-import { ANCHOR_DOT_RADIUS, BaseDrawingTool, HIT_TEST_TOLERANCE_PX, SELECTED_STROKE_COLOR, pointToSegmentDistance } from "./BaseDrawingTool.js";
+import { ANCHOR_DOT_RADIUS, BaseDrawingTool, HIT_TEST_TOLERANCE_PX, SELECTED_STROKE_COLOR, drawArrowhead, pointToSegmentDistance } from "./BaseDrawingTool.js";
 
 /**
  * Multi-point trace: click to place a point, click again to extend the
  * line from wherever the last one landed, and keep going - each click
  * adds another connected segment, so unlike `Trendline` (fixed at two
  * points, exactly one straight segment) this can zigzag through any
- * number of points - a "W"-shaped pattern, say - before it's done.
+ * number of points - a "W"-shaped pattern, say - before it's done. The
+ * last leg only (see `draw()`) carries an arrowhead pointing the way it
+ * runs, so the shape always reads as "this is the direction the trend
+ * is currently heading," not just a plain connect-the-dots outline.
  *
  * There's no fixed point count to reach (see `maxPoints` below), so
  * placement doesn't complete itself through `BaseDrawingTool`'s default
@@ -65,8 +68,9 @@ export class TraceLine extends BaseDrawingTool {
       // number of legs instead of Trendline's always-exactly-one
       // segment.
       const pixels = this.points.map((p) => toPixel(p.time, p.price));
+      const strokeColor = this.selected ? SELECTED_STROKE_COLOR : this.color;
       ctx.save();
-      ctx.strokeStyle = this.selected ? SELECTED_STROKE_COLOR : this.color;
+      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = this.selected ? 2.5 : 1.5;
       ctx.setLineDash([]);
       ctx.beginPath();
@@ -74,6 +78,17 @@ export class TraceLine extends BaseDrawingTool {
       for (const p of pixels.slice(1)) ctx.lineTo(p.x, p.y);
       ctx.stroke();
       ctx.restore();
+
+      // An arrowhead on the LAST leg only - not every leg - pointing the
+      // way that leg runs, so the shape always reads as "this is the
+      // direction the trend is currently heading," the same read a
+      // single-segment trend line's own arrow would give, just anchored
+      // to whichever segment is currently the open end here (the last
+      // one placed so far, still updating as more points are added,
+      // permanently fixed once `finish()` locks it in).
+      const tail = pixels[pixels.length - 2];
+      const tip = pixels[pixels.length - 1];
+      drawArrowhead(ctx, tail.x, tail.y, tip.x, tip.y, strokeColor);
     }
 
     // Rubber-band preview from the *last committed* point to wherever

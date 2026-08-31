@@ -6,6 +6,7 @@ function mockCtx() {
     save: jest.fn(),
     restore: jest.fn(),
     beginPath: jest.fn(),
+    closePath: jest.fn(),
     moveTo: jest.fn(),
     lineTo: jest.fn(),
     stroke: jest.fn(),
@@ -138,5 +139,67 @@ describe("TraceLine", () => {
     const tool = new TraceLine();
     tool.addPoint({ time: 0, price: 0 });
     expect(tool.hitTest(0, 0, () => ({ x: 0, y: 0 }))).toBe(false);
+  });
+
+  it("draws no arrowhead (closePath, the shape drawArrowhead() always ends with) with only one point placed", () => {
+    const tool = new TraceLine();
+    const ctx = mockCtx();
+    tool.addPoint({ time: 0, price: 0 });
+    tool.draw(ctx, () => ({ x: 0, y: 0 }));
+    expect(ctx.closePath).not.toHaveBeenCalled();
+  });
+
+  it("draws an arrowhead (closePath) once a second point makes a real segment to point along", () => {
+    const tool = new TraceLine();
+    const ctx = mockCtx();
+    tool.addPoint({ time: 0, price: 0 });
+    tool.addPoint({ time: 1, price: 10 });
+    tool.draw(ctx, (time, price) => ({ x: time * 10, y: price }));
+    expect(ctx.closePath).toHaveBeenCalled();
+  });
+
+  it("the arrowhead sits at the LAST point, pointing back toward the second-to-last - not the first segment", () => {
+    const tool = new TraceLine();
+    const ctx = mockCtx();
+    tool.addPoint({ time: 0, price: 0 });
+    tool.addPoint({ time: 1, price: 10 });
+    tool.addPoint({ time: 2, price: -5 });
+
+    const toPixel = (time: number, price: number) => ({ x: time * 10, y: price });
+    tool.draw(ctx, toPixel);
+
+    // moveTo(20, -5) is the arrowhead's own tip (last point) - distinct
+    // from the polyline's own moveTo(0, 0) at its start.
+    expect(ctx.moveTo).toHaveBeenCalledWith(0, 0); // polyline start
+    expect(ctx.moveTo).toHaveBeenCalledWith(20, -5); // arrowhead tip = last point, not the first or middle one
+  });
+
+  it("moves as more points are added - the arrowhead always tracks the current last segment", () => {
+    const tool = new TraceLine();
+    const toPixel = (time: number, price: number) => ({ x: time * 10, y: price });
+
+    tool.addPoint({ time: 0, price: 0 });
+    tool.addPoint({ time: 1, price: 10 });
+    const ctxAfterTwo = mockCtx();
+    tool.draw(ctxAfterTwo, toPixel);
+    expect(ctxAfterTwo.moveTo).toHaveBeenCalledWith(10, 10); // arrowhead tip at (1, 10)
+
+    tool.addPoint({ time: 2, price: 20 });
+    const ctxAfterThree = mockCtx();
+    tool.draw(ctxAfterThree, toPixel);
+    expect(ctxAfterThree.moveTo).toHaveBeenCalledWith(20, 20); // now at the new last point instead
+  });
+
+  it("still draws the arrowhead on the finished, permanent trace, not just while placing", () => {
+    const tool = new TraceLine();
+    const ctx = mockCtx();
+    tool.addPoint({ time: 0, price: 0 });
+    tool.addPoint({ time: 1, price: 10 });
+    tool.finish();
+    expect(tool.isComplete()).toBe(true);
+
+    const toPixel = (time: number, price: number) => ({ x: time * 10, y: price });
+    tool.draw(ctx, toPixel);
+    expect(ctx.moveTo).toHaveBeenCalledWith(10, 10);
   });
 });

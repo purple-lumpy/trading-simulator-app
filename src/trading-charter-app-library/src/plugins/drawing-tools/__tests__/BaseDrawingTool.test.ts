@@ -1,4 +1,17 @@
-import { BaseDrawingTool } from "../BaseDrawingTool.js";
+import { BaseDrawingTool, drawArrowhead } from "../BaseDrawingTool.js";
+
+function mockCtx() {
+  return {
+    save: jest.fn(),
+    restore: jest.fn(),
+    beginPath: jest.fn(),
+    closePath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    fill: jest.fn(),
+    fillStyle: "",
+  } as unknown as CanvasRenderingContext2D;
+}
 
 /** Minimal concrete subclass - just enough to exercise the shared bookkeeping without any of a real tool's own draw()/hitTest() logic getting in the way. */
 class StubTool extends BaseDrawingTool {
@@ -103,5 +116,56 @@ describe("BaseDrawingTool", () => {
     expect(typeof tool.color).toBe("string");
     tool.color = "#ff0000";
     expect(tool.color).toBe("#ff0000");
+  });
+});
+
+describe("drawArrowhead", () => {
+  it("moves to the tip, fills a triangle back to it (closePath + fill), in the given color", () => {
+    const ctx = mockCtx();
+    drawArrowhead(ctx, 0, 0, 10, 0, "#2196f3");
+
+    expect(ctx.fillStyle).toBe("#2196f3");
+    expect(ctx.moveTo).toHaveBeenCalledWith(10, 0); // starts at the tip
+    expect(ctx.lineTo).toHaveBeenCalledTimes(2); // the two wings
+    expect(ctx.closePath).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
+
+  it("both wings sit the same fixed distance behind the tip, regardless of direction", () => {
+    const ctx = mockCtx();
+    drawArrowhead(ctx, 0, 0, 10, 0, "#2196f3");
+
+    const [[leftX, leftY], [rightX, rightY]] = (ctx.lineTo as jest.Mock).mock.calls as [number, number][];
+    const wingLength = Math.hypot(10 - leftX, 0 - leftY);
+    expect(wingLength).toBeGreaterThan(0);
+    expect(Math.hypot(10 - rightX, 0 - rightY)).toBeCloseTo(wingLength);
+  });
+
+  it("both wings fall behind the tip along the from->tip direction, not ahead of it", () => {
+    const ctx = mockCtx();
+    const fromX = 0;
+    const fromY = 0;
+    const tipX = 10;
+    const tipY = 0;
+    drawArrowhead(ctx, fromX, fromY, tipX, tipY, "#2196f3");
+
+    const dirX = tipX - fromX;
+    const dirY = tipY - fromY;
+    for (const [wingX, wingY] of (ctx.lineTo as jest.Mock).mock.calls as [number, number][]) {
+      // Vector from the tip back to this wing, dotted with the line's own
+      // forward direction - negative means the wing sits behind the tip
+      // (the arrowhead sweeps backward), not out ahead of it.
+      const dot = (wingX - tipX) * dirX + (wingY - tipY) * dirY;
+      expect(dot).toBeLessThan(0);
+    }
+  });
+
+  it("rotates with the direction - a vertical segment produces wings offset horizontally instead of vertically", () => {
+    const ctx = mockCtx();
+    drawArrowhead(ctx, 0, 0, 0, 10, "#2196f3"); // straight down
+
+    for (const [wingX] of (ctx.lineTo as jest.Mock).mock.calls as [number, number][]) {
+      expect(Math.abs(wingX)).toBeGreaterThan(0.5); // swept sideways off the vertical line
+    }
   });
 });
