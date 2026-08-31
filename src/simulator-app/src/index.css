@@ -1,0 +1,516 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #0e0f12;
+  color: #e4e6eb;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 16px;
+}
+
+header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.chart-nav-bar {
+  display: flex;
+  align-items: center;
+  /* Allows wrapping onto a second line at narrower widths now that the
+     drawing-tools group joined the timeframe/date-picker controls here -
+     four toggle buttons plus the existing two controls can get tight at
+     max-width, and wrapping degrades gracefully where a forced single
+     row would just clip or overflow. */
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px; /* matches ChartPanel's canvas width */
+  box-sizing: border-box;
+  padding: 8px 4px;
+  border-bottom: 1px solid #22252b;
+}
+
+.instrument-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9aa0a6;
+  cursor: help; /* signals the hover tooltip is there to read, same as .start-date-picker's own comment */
+}
+
+.instrument-picker select {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+/**
+ * "Real" vs "Sample" badge next to the instrument picker - the sole,
+ * always-visible place this status is shown (the header used to repeat
+ * it as a smaller text line under the title too; removed as redundant).
+ * Colors deliberately don't reuse .up-color/.down-color (green/red would
+ * read as a price-direction signal, not a data-provenance one) - a
+ * neutral blue for real data, a muted grey for sample, so the badge
+ * can't be misread as bullish/bearish.
+ */
+.data-mode-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: help;
+}
+
+.data-mode-badge--real {
+  color: #7fc4ff;
+  background: rgba(33, 150, 243, 0.15);
+  border: 1px solid rgba(33, 150, 243, 0.4);
+}
+
+.data-mode-badge--sample {
+  color: #9aa0a6;
+  background: rgba(154, 160, 166, 0.12);
+  border: 1px solid rgba(154, 160, 166, 0.3);
+}
+
+.timeframe-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9aa0a6;
+}
+
+.timeframe-picker select {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.start-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9aa0a6;
+  /* Signals the hover tooltip (title=, see ChartNavBar's own
+     START_DATE_TOOLTIP comment) is there to read, the same way an
+     underlined link cues "there's more here." */
+  cursor: help;
+}
+
+.start-date-picker input[type="date"] {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-size: 13px;
+  color-scheme: dark; /* keeps the browser's own native date-picker popup dark, matching the rest of this UI, instead of a jarring light popup */
+}
+
+.start-date-clear {
+  background: transparent;
+  color: #9aa0a6;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.start-date-clear:hover {
+  color: #e4e6eb;
+  border-color: #3a3f47;
+}
+
+.drawing-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.drawing-tools button {
+  background: #1a1c20;
+  color: #9aa0a6;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  /* Icon-only now (no text label - hover title/aria-label carry the
+     name) - fixed min-width plus centered text keeps every button the
+     same size regardless of how wide its particular glyph is. */
+  min-width: 28px;
+  padding: 4px 6px;
+  font-size: 15px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.drawing-tools button:hover {
+  color: #e4e6eb;
+  border-color: #3a3f47;
+}
+
+/* The one currently-selected tool (aria-pressed="true" alongside this
+   class, kept in sync by ChartNavBar - see its own drawing-tools JSX) -
+   the same #2196f3 accent BaseDrawingTool.ts defaults every drawn
+   line's own color to, so "which button is lit up" and "what color the
+   line on the chart will be" read as the same idea. */
+.drawing-tools button.drawing-tool-active {
+  background: #17324a;
+  color: #7fc4ff;
+  border-color: #2196f3;
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-panel canvas {
+  border: 1px solid #22252b;
+  border-radius: 4px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.controls button {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.controls select {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 4px;
+  /* No margin-left here anymore - that used to space the select from its
+     own "Speed" label text inside one flex item; now it's a direct
+     .controls child, .controls' own `gap` already spaces it from its
+     neighbors the same way every other control is spaced. */
+}
+
+.controls .progress {
+  color: #9aa0a6;
+  margin-left: auto;
+}
+
+/* ---- settings gear + panel ------------------------------------------ */
+
+.chart-canvas-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/**
+ * Delete badge for whichever placed drawing is currently selected (see
+ * ChartPanel's deleteAnchor state and ChartCore.getSelectedDrawingDeleteAnchor()'s
+ * own doc comment) - a small red circle with a plain "×", positioned
+ * absolutely at the anchor point and nudged up-and-right of it (the
+ * translate below) rather than centered exactly on top, so it doesn't
+ * sit directly over the drawing's own anchor dot/line at that spot.
+ * Sized and styled to read clearly as "delete," not just another tool
+ * button - red instead of this app's usual dark/blue palette, on purpose.
+ */
+.drawing-delete-button {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #ffffff;
+  background: #e53935;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transform: translate(-25%, -125%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.drawing-delete-button:hover {
+  background: #ff5252;
+}
+
+.settings-panel-container {
+  /* Fallback fixed corner position, used only when ChartCore.getGearAnchor()
+     returns null (no price-ruler strip reserved at all) - see
+     SettingsPanel's own `anchor` prop doc comment. When an anchor IS
+     available, SettingsPanel supplies an inline left/top/right/bottom/
+     transform override (centering the gear on that point, rather than
+     using the point as its top-left corner) that takes precedence over
+     these. */
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.settings-gear-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #2c2f36;
+  background: rgba(26, 28, 32, 0.85);
+  color: #e4e6eb;
+  cursor: pointer;
+  /* Centers the gear SVG's own box dead center in the circle - a
+     <button>'s default padding (browser-UA styling, not reset anywhere
+     else in this file) would otherwise offset it. This is exact now that
+     the icon is hand-drawn SVG (see SettingsPanel.tsx's own comment) -
+     unlike the old "⚙" text glyph, the SVG's element box IS its true
+     visual extent, so centering the box is centering the icon, with no
+     font-dependent ink offset left to fight. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.settings-gear-button:hover {
+  background: #1a1c20;
+}
+
+.settings-panel {
+  /* Base case: no real gear anchor (SettingsPanel's `anchor` prop is
+     null - ChartCore.getGearAnchor() returns that only when no
+     price-ruler strip is reserved at all), so .settings-panel-container
+     falls back to ITS OWN fixed top-right corner instead of tracking the
+     gear. The gear's already near the top there, so opening downward
+     (into the chart body, where there's room) is what stays on-screen -
+     unlike the anchored case below, which needs the opposite. */
+  position: absolute;
+  top: 36px;
+  right: 0;
+  width: 260px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: #16181c;
+  border: 1px solid #2c2f36;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+/* Anchored to a real gear position: the gear always sits in the chart's
+   lower footer band there (see getGearAnchor()'s own doc comment), so
+   opening downward like the base rule above would run the panel off
+   the bottom of the chart/page - this flips it to open *upward* from
+   the gear instead, staying inside. See SettingsPanel's own comment on
+   `panelClassName` for why this is a separate modifier rather than
+   changed in the base rule directly. */
+.settings-panel--anchored {
+  top: auto;
+  bottom: 36px;
+}
+
+/* Gear anchored near the chart's *right* edge (price axis on the right,
+   the default) - open toward the left so the panel stays inside the
+   chart instead of running off the right edge of the page. */
+.settings-panel--axis-right {
+  right: 0;
+  left: auto;
+}
+
+/* Mirror case: gear anchored near the chart's *left* edge (price axis
+   on the left) - open toward the right instead. */
+.settings-panel--axis-left {
+  left: 0;
+  right: auto;
+}
+
+.settings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.settings-reset {
+  background: none;
+  border: 1px solid #2c2f36;
+  color: #9aa0a6;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.settings-reset:hover {
+  color: #e4e6eb;
+}
+
+.settings-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #22252b;
+}
+
+.settings-cancel,
+.settings-apply {
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.settings-cancel {
+  background: none;
+  border: 1px solid #2c2f36;
+  color: #9aa0a6;
+}
+
+.settings-cancel:hover {
+  color: #e4e6eb;
+}
+
+.settings-apply {
+  background: #26a69a;
+  border: 1px solid #26a69a;
+  color: #0e0f12;
+  font-weight: 600;
+}
+
+.settings-apply:hover {
+  background: #2dbfb0;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #22252b;
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-toggle,
+.settings-select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #e4e6eb;
+  gap: 8px;
+}
+
+.settings-select-row select {
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 3px;
+}
+
+/* Wraps a <input type="range"> + its live "NN%" readout as one unit on
+   the right side of a .settings-select-row - e.g. barAreaWidthRatio - so
+   the slider and the number it's currently set to always read together. */
+.settings-slider-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.settings-slider-value input[type="range"] {
+  accent-color: #26a69a;
+}
+
+.color-setting {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.color-setting-label {
+  color: #9aa0a6;
+}
+
+.color-setting-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #2c2f36;
+  cursor: pointer;
+  padding: 0;
+}
+
+.color-setting-popover {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  z-index: 30;
+  background: #16181c;
+  border: 1px solid #2c2f36;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.color-setting-hex {
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #1a1c20;
+  color: #e4e6eb;
+  border: 1px solid #2c2f36;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: monospace;
+}

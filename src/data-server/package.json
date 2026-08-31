@@ -1,0 +1,23 @@
+{
+  "name": "trading-data-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Node server that proxies real market data from Finnhub for simulator-app. The one place FINNHUB_API_KEY is read and used - it never reaches browser-bundled code (see the repo root .env.example's own comment on why) - simulator-app talks to this server only, on its own port, never to Finnhub directly.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}

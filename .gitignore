@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local secrets - never commit. See .env.example for the variables this
+# project expects; copy it to .env and fill in real values there.
+.env
+.env.local
+.env.*.local

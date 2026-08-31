@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>trading-charter-app-library — demo</title>
+    <style>
+      html, body { margin: 0; background: #0e0f12; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <canvas id="chart" width="1000" height="500"></canvas>
+    <script type="module">
+      import { ChartCore, ReplayController, realtimeIntervalMs } from "../dist/index.js";
+
+      // A 30-second timeframe: real enough to feel like real bars forming,
+      // short enough that this demo doesn't make you wait. Swap
+      // TIMEFRAME_SECONDS for 15/60/300 to try other real-time paces —
+      // realtimeIntervalMs() is what makes 1x genuinely mean that many
+      // real seconds per bar instead of an arbitrary constant.
+      const TIMEFRAME_SECONDS = 30;
+
+      // Generate a random walk so this demo has no external data dependency.
+      function generateCandles(n, timeframeSeconds) {
+        const candles = [];
+        let price = 100;
+        let t = Math.floor(Date.now() / 1000) - n * timeframeSeconds;
+        for (let i = 0; i < n; i++) {
+          const open = price;
+          const change = (Math.random() - 0.5) * 2;
+          const close = Math.max(1, open + change);
+          const high = Math.max(open, close) + Math.random();
+          const low = Math.min(open, close) - Math.random();
+          const volume = Math.random() * 1000;
+          candles.push({ time: t, open, high, low, close, volume });
+          price = close;
+          t += timeframeSeconds;
+        }
+        return candles;
+      }
+
+      const allCandles = generateCandles(300, TIMEFRAME_SECONDS);
+      const canvas = document.getElementById("chart");
+      const chart = new ChartCore(canvas, { volumePaneRatio: 0.18 });
+
+      // Replay-style reveal: start empty, feed one bar at a time — with
+      // intrabarTicks set, each bar also visibly forms (goes up and down)
+      // before locking, the same as a live feed would look. baseIntervalMs
+      // is genuinely real-time for TIMEFRAME_SECONDS; use the Speed
+      // control pattern from the simulator app (setSpeed()) to fast-forward
+      // on top of it if 1x feels slow while testing.
+      const replay = new ReplayController(
+        { length: () => allCandles.length, at: (i) => allCandles[i] },
+        { baseIntervalMs: realtimeIntervalMs(TIMEFRAME_SECONDS), intrabarTicks: 6 }
+      );
+      replay.onUpdate((update) => chart.applyUpdate(update));
+      replay.play();
+    </script>
+  </body>
+</html>

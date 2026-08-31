@@ -1,0 +1,19 @@
+{
+  "name": "trading-simulator-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Market Replay Trainer monorepo: the custom charting library and the apps that consume it.",
+  "workspaces": [
+    "src/trading-charter-app-library",
+    "src/simulator-app",
+    "src/data-server"
+  ],
+  "scripts": {
+    "build:lib": "npm run build --workspace=src/trading-charter-app-library",
+    "test:lib": "npm run test --workspace=src/trading-charter-app-library",
+    "dev:simulator": "npm run dev --workspace=src/simulator-app",
+    "dev:server": "npm run dev --workspace=src/data-server",
+    "build:simulator": "npm run build --workspace=src/simulator-app",
+    "build:site": "npm run build:lib && npm run build:simulator"
+  }
+}

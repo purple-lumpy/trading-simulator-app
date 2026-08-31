@@ -1,0 +1,26 @@
+{
+  "name": "simulator-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Basic Market Replay Trainer shell: proves out trading-charter-app-library as a real installed dependency, with replay controls wired to a React app shell.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-colorful": "^5.8.0",
+    "react-dom": "^18.3.1",
+    "trading-charter-app-library": "^0.1.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.9"
+  }
+}

@@ -1,0 +1,70 @@
+name: Deploy simulator-app to GitHub Pages
+
+# Builds trading-charter-app-library, then simulator-app (which depends on
+# the library's own built dist/ output - see simulator-app/package.json's
+# "trading-charter-app-library" dependency), and publishes
+# src/simulator-app/dist as a static site via GitHub's own Pages deploy
+# action. No data-server is deployed or needed here - simulator-app's
+# realData.ts already skips its real-data fetch outside `vite dev` (see
+# its own comment), so the deployed site runs on sample data only, exactly
+# as it does today whenever data-server isn't running locally.
+on:
+  push:
+    branches: [main]
+  # Lets this be re-run on demand from the Actions tab without needing a
+  # new commit - handy the first time Pages is being turned on for this
+  # repo, or to redeploy after changing only repo settings.
+  workflow_dispatch:
+
+# Least-privilege token scope for the two jobs below - id-token is
+# specifically what actions/deploy-pages needs to authenticate the deploy.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment in flight at a time; a new push cancels a
+# still-running older one rather than letting them race to publish.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Installs every workspace's dependencies in one pass (npm
+      # workspaces) - trading-charter-app-library, simulator-app, and
+      # data-server (unused by this workflow, but harmless to install).
+      - run: npm ci
+
+      # trading-charter-app-library first: simulator-app imports its
+      # compiled dist/ output (package.json "main": "dist/index.js"), not
+      # its TypeScript source, so the library build has to exist before
+      # simulator-app's own build can resolve it.
+      - run: npm run build:lib
+
+      - run: npm run build:simulator
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/simulator-app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
