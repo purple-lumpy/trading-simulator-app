@@ -645,3 +645,25 @@ header h1 {
     height: 26px;
   }
 }
+
+/* Decision annotation workspace */
+.annotation-app header p, .annotation-hint { color: #9aa0a6; font-size: 13px; line-height: 1.7; margin: 0; }
+.annotation-toolbar, .annotation-summary, .annotation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.annotation-toolbar { width: 100%; font-size: 13px; }
+.annotation-toolbar [role="status"] { margin-right: auto; color: #7fc4ff; }
+.annotation-app button, .import-label { background: #1a1c20; border: 1px solid #3a3f47; border-radius: 6px; color: #e4e6eb; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+.annotation-app button:disabled { opacity: .4; cursor: default; }
+.import-label input { display: block; max-width: 220px; margin-top: 6px; }
+.annotation-card { width: 100%; box-sizing: border-box; background: #16181c; border: 1px solid #2c2f36; border-radius: 8px; padding: 18px; }
+.annotation-card h2 { font-size: 16px; margin: 0 0 14px; }
+.annotation-summary { font-size: 13px; color: #b7c1cf; margin-bottom: 16px; }
+.annotation-actions input { width: 100px; background: #0e0f12; border: 1px solid #3a3f47; border-radius: 4px; color: #fff; padding: 8px; }
+.annotation-actions .buy { color: #56d7ba; border-color: #267d6c; }
+.annotation-actions .sell { color: #ff9292; border-color: #a34b4b; }
+.annotation-error { color: #ff9292; }
+.annotation-table-wrap { overflow-x: auto; margin-top: 16px; }
+.annotation-card table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.annotation-card th, .annotation-card td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #2c2f36; }
+.workspace-modes { display: flex; justify-content: center; gap: 8px; padding-top: 16px; }
+.workspace-modes button { padding: 8px 16px; border: 1px solid #3a3f47; border-radius: 6px; background: #1a1c20; color: #b7c1cf; cursor: pointer; }
+.workspace-modes button[aria-pressed="true"] { color: #7fc4ff; border-color: #2196f3; background: #17324a; }

@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { ChartCore, ReplayController, MovingAverage, realtimeIntervalMs } from "trading-charter-app-library";
-import type { Candle, CandleUpdate, ReplaySpeed } from "trading-charter-app-library";
+import type { Candle, CandleUpdate, ReplaySpeed, Marker } from "trading-charter-app-library";
 import { useChartSettingsStore } from "./settings/chartSettingsStore";
 import { SettingsPanel, type GearAnchor } from "./settings/SettingsPanel";
 import type { DrawingToolName } from "./ChartNavBar";
 
 interface ChartPanelProps {
+  markers?: Marker[];
+  initialRevealedCount?: number;
+  onProgress?: (count: number) => void;
+  onPlayingChange?: (playing: boolean) => void;
+  seekRequest?: { index: number; nonce: number };
   candles: Candle[];
   /** The candle set's own bar duration, in seconds — drives how long one bar genuinely takes to form at 1x (see realtimeIntervalMs). */
   timeframeSeconds: number;
@@ -52,7 +57,7 @@ function revealedCountAt(candles: readonly Candle[], timeframeSeconds: number, n
  * isn't built yet, so the data source is the local sample generator
  * instead (see sampleData.ts / App.tsx's base-series comment).
  */
-export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanelProps) {
+export function ChartPanel({ candles, timeframeSeconds, activeTool, markers, initialRevealedCount = 0, onProgress, onPlayingChange, seekRequest }: ChartPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // The canvas's sizing container - see the ResizeObserver effect below,
   // which watches THIS element's width (not the canvas's own, which is
@@ -206,8 +211,8 @@ export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanel
 
     replayRef.current?.pause();
 
-    const newRevealedCount = revealedCountAt(candles, timeframeSeconds, nowTimeRef.current);
-    if (newRevealedCount > 0) chart.setData(candles.slice(0, newRevealedCount));
+    const newRevealedCount = nowTimeRef.current === null ? Math.min(initialRevealedCount, candles.length) : revealedCountAt(candles, timeframeSeconds, nowTimeRef.current);
+    chart.setData(candles.slice(0, newRevealedCount));
     setRevealedCount(newRevealedCount);
 
     const replay = new ReplayController(
@@ -231,6 +236,10 @@ export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanel
       if (update.final) {
         setRevealedCount(update.index + 1);
         nowTimeRef.current = update.candle.time + timeframeSeconds;
+        if (update.index === candles.length - 1) {
+          replay.pause();
+          setPlaying(false);
+        }
       }
       chart.applyUpdate(update);
     });
@@ -248,6 +257,20 @@ export function ChartPanel({ candles, timeframeSeconds, activeTool }: ChartPanel
     // candles/timeframeSeconds change should.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, timeframeSeconds]);
+
+  useEffect(() => { onProgress?.(revealedCount); }, [revealedCount, onProgress]);
+  useEffect(() => { onPlayingChange?.(playing); }, [playing, onPlayingChange]);
+  useEffect(() => { chartRef.current?.setMarkers(markers ?? []); }, [markers]);
+  useEffect(() => {
+    if (!seekRequest) return;
+    const count = Math.max(0, Math.min(candles.length, seekRequest.index + 1));
+    replayRef.current?.pause();
+    setPlaying(false);
+    chartRef.current?.setData(candles.slice(0, count));
+    replayRef.current?.seek(count);
+    nowTimeRef.current = count ? candles[count - 1].time + timeframeSeconds : null;
+    setRevealedCount(count);
+  }, [seekRequest, candles, timeframeSeconds]);
 
   // Push every settings-panel change straight to the live chart via the
   // setOptions() runtime-reconfiguration entry point - this is the one
