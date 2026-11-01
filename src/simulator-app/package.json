@@ -5,6 +5,7 @@
   "description": "Basic Market Replay Trainer shell: proves out trading-charter-app-library as a real installed dependency, with replay controls wired to a React app shell.",
   "type": "module",
   "scripts": {
+    "predev": "npm run build --workspace=trading-charter-app-library",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview"

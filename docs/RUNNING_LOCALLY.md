@@ -78,6 +78,9 @@ Runs the `trading-charter-app-library` Jest suite (`ChartCore`, `ReplayControlle
 
 ## Troubleshooting
 
+- **Windows PowerShell blocks `npm.ps1` (scripts are disabled).** Use `npm.cmd` in place of `npm`, for example `npm.cmd install` and `npm.cmd start`. This does not require changing the system execution policy.
+- **Starting from a fresh checkout.** `npm start`, `npm run dev`, and `npm run dev:simulator` start the app and automatically build the local charting library first. If port 5173 is occupied, Vite selects the next available port; open the URL printed in the terminal.
+
 - **Port already in use (5173 or 4001).** Something else is already running there — stop it, or pass Vite a different port (`npm run dev:simulator -- --port 5174`) / set `DATA_SERVER_PORT` in `.env` for `data-server`. If you change `data-server`'s port, update `DATA_SERVER_URL` in `src/simulator-app/src/realData.ts` to match — it's hardcoded rather than read from an env var (see that file's own comment on why).
 - **CORS error in the browser console.** `data-server` should already send permissive CORS headers for local dev (`app.use(cors())` in `src/data-server/src/index.ts`) — if you're seeing this, double-check you're hitting `data-server` on its own port and not accidentally proxying through Vite.
 - **"Live" badge never appears, no console error.** `data-server` is probably not running, or the terminal running it shows a fetch error reaching Coinbase — check that terminal, and confirm the instrument you picked is one of the four real Coinbase pairs.

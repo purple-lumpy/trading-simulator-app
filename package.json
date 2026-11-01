@@ -9,6 +9,8 @@
     "src/data-server"
   ],
   "scripts": {
+    "start": "npm run dev:simulator",
+    "dev": "npm run dev:simulator",
     "build:lib": "npm run build --workspace=src/trading-charter-app-library",
     "test:lib": "npm run test --workspace=src/trading-charter-app-library",
     "dev:simulator": "npm run dev --workspace=src/simulator-app",
