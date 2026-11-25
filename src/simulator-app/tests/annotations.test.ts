@@ -36,3 +36,16 @@ test("rejects corrupted datasets and mismatched markers", () => {
   assert.throws(() => parseAnnotationFile(JSON.stringify({ schemaVersion: 1, dataset: { ...dataset, candles: [{ ...dataset.candles[0], high: 1 }] }, markers: [] })));
   assert.throws(() => recalculateMarkers(dataset, [{ ...marker("buy", 1, 1000), datasetId: "other" }]));
 });
+
+import { parseMarketCsv } from "../src/annotations/csv.ts";
+test("CSV maps UTC text and tick volume, sorts rows and ignores extra fields", () => {
+  const rows = parseMarketCsv('\uFEFFtime_utc,timestamp_utc,open,high,low,close,tick_volume,spread_points,real_volume\r\n"2025-01-01 00:15:00",1735690500,10,12,9,11,8,2,0\r\n2025-01-01 00:00:00,1735689600,10,12,9,11,7,2,0', 'time_utc');
+  assert.equal(rows[0].time, 1735689600);
+  assert.equal(rows[0].volume, 7);
+});
+test("CSV supports millisecond timestamps and rejects empty prices and duplicate times", () => {
+  const header = 'timestamp_utc,open,high,low,close,tick_volume\n';
+  assert.equal(parseMarketCsv(header + '1735689600000,10,12,9,11,7', 'timestamp_utc')[0].time, 1735689600);
+  assert.throws(() => parseMarketCsv(header + '1735689600,,12,9,11,7', 'timestamp_utc'));
+  assert.throws(() => parseMarketCsv(header + '1735689600,10,12,9,11,7\n1735689600,10,12,9,11,7', 'timestamp_utc'));
+});

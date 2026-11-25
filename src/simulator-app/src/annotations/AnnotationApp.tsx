@@ -5,6 +5,7 @@ import { generateSampleCandles } from "../sampleData";
 import { parseAnnotationFile, recalculateMarkers } from "./model";
 import type { AnnotationFile, DecisionMarker } from "./model";
 import "../index.css";
+import { parseMarketCsv } from "./csv";
 
 const STORAGE_KEY = "market-replay-annotations-v1";
 const actionNames = { buy: "买入", sell: "卖出", hold: "观望" };
@@ -32,6 +33,10 @@ export function AnnotationApp() {
   const [seekRequest, setSeekRequest] = useState<{ index: number; nonce: number }>();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const [symbol, setSymbol] = useState("XAUUSD");
+  const [period, setPeriod] = useState(900);
+  const [timeColumn, setTimeColumn] = useState("time_utc");
+  const [csvStatus, setCsvStatus] = useState("");
   const { dataset, markers, revealedCount } = file;
   const current = dataset.candles[revealedCount - 1];
   const currentMarker = markers.find(m => m.candleTime === current?.time);
@@ -91,14 +96,41 @@ export function AnnotationApp() {
     finally { input.value = ""; }
   }
 
+  async function importCsv(input: HTMLInputElement) {
+    const selected = input.files?.[0];
+    if (!selected) return;
+    try {
+      if (!symbol.trim()) throw new Error("请填写品种。");
+      const candles = parseMarketCsv(await selected.text(), timeColumn);
+      const gaps = candles.slice(1).filter((c, i) => c.time - candles[i].time > period).length;
+      if (candles.some((c, i) => i > 0 && (c.time - candles[i - 1].time) % period !== 0)) throw new Error("时间间隔与所选周期不匹配，请检查周期。");
+      if (!window.confirm(`导入 ${symbol.trim()}，${period / 60} 分钟，${candles.length} 根 K 线。\nUTC 范围：${new Date(candles[0].time * 1000).toISOString()} 至 ${new Date(candles[candles.length - 1].time * 1000).toISOString()}\n发现 ${gaps} 处时间缺口（可能包含休市），不自动补齐。\n将替换当前行情及标记，请先导出需要保留的记录。继续？`)) return;
+      setFile({ schemaVersion: 1, dataset: { id: crypto.randomUUID(), symbol: symbol.trim(), timeframeSeconds: period, candles }, markers: [], revealedCount: Math.min(40, candles.length) });
+      setRevision(v => v + 1); setSeekRequest(undefined); setEditingId(null); setPlaying(false); setSaveBlocked(false); setError("");
+      setCsvStatus(`已导入 ${selected.name}；${gaps} 处时间缺口。`);
+    } catch (e) { setError(`CSV 导入失败：${(e as Error).message}`); }
+    finally { input.value = ""; }
+  }
+
   return <main className="app annotation-app">
-    <header><h1>K 线决策标注</h1><p>固定模拟行情 · SAMPLE · 5 分钟 · {dataset.candles.length} 根 K 线</p></header>
+    <header><h1>K 线决策标注</h1><p>{dataset.symbol} · {dataset.timeframeSeconds / 60} 分钟 · {dataset.candles.length} 根 K 线</p></header>
+    <section className="annotation-card">
+      <h2>导入 CSV 行情</h2>
+      <div className="annotation-actions">
+        <label>品种 <input value={symbol} onChange={e => setSymbol(e.target.value)} /></label>
+        <label>周期 <select value={period} onChange={e => setPeriod(Number(e.target.value))}><option value={900}>15 分钟</option><option value={3600}>1 小时</option><option value={14400}>4 小时</option></select></label>
+        <label>时间列 <select value={timeColumn} onChange={e => setTimeColumn(e.target.value)}><option>time_utc</option><option>timestamp_utc</option><option>time</option></select></label>
+        <label className="import-label">选择 CSV<input type="file" accept=".csv,text/csv,.tsv" onChange={e => void importCsv(e.currentTarget)} /></label>
+      </div>
+      <p className="annotation-hint">时间按 UTC 开盘时间解析，支持日期文本及秒/毫秒时间戳。tick_volume → volume（兼容 tick_volumn）；OHLC 同名。spread_points、real_volume 不参与标注导入。每次导入创建独立数据集，原记录请先导出。</p>
+      {csvStatus && <p role="status">{csvStatus}</p>}
+    </section>
     <div className="annotation-toolbar">
       <span role="status">{saveBlocked ? "自动保存已暂停" : saveStatus}</span>
       <button onClick={download}>导出行情与标记 JSON</button>
       <label className="import-label">恢复 JSON<input type="file" accept=".json,application/json" onChange={e => void importFile(e.currentTarget)} /></label>
     </div>
-    <p className="annotation-hint">行情为随机生成的练习数据，已随记录固定保存。按 Next 逐根查看；暂停后，以最后一根已收盘 K 线的收盘价标记。数量按品种单位计，初始持仓为 0。</p>
+    <p className="annotation-hint">按 Next 逐根查看；暂停后，以最后一根已收盘 K 线的收盘价标记。数量按品种单位计，初始持仓为 0。显示时间为本机时区，导出 time 为 UTC Unix 秒。</p>
     <ChartPanel key={`${dataset.id}-${revision}`} candles={dataset.candles} timeframeSeconds={dataset.timeframeSeconds} activeTool="none" markers={chartMarkers} initialRevealedCount={file.revealedCount} onProgress={progress} onPlayingChange={setPlaying} seekRequest={seekRequest} />
     <section className="annotation-card">
       <h2>{editingId && currentMarker?.id === editingId ? "编辑当前标记" : "添加决策标记"}</h2>
